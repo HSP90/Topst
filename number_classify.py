@@ -30,22 +30,20 @@ def draw(event, x, y, flags, param):
     elif event == cv2.EVENT_MOUSEMOVE:
         if drawing:
             points.append((x, y))
-            cv2.line(img, points[-2], points[-1], (0, 0, 255), 10)
+            cv2.line(img, points[-2], points[-1], (255, 255, 255), 10)  # 흰색으로 그리기
     elif event == cv2.EVENT_LBUTTONUP:
         drawing = False
         points = []
 
-# 화면 초기화
-img = np.ones((500, 500, 3), dtype=np.uint8) * 255  # 흰 배경
+# 화면 초기화 (검은 배경)
+img = np.zeros((500, 500, 3), dtype=np.uint8)
 
 # 마우스 이벤트 처리
 cv2.namedWindow('Draw Digits')
 cv2.setMouseCallback('Draw Digits', draw)
 
 while True:
-    cv2.imshow('Draw Digits', img)
-
-    # 숫자 예측
+    # 숫자 예측을 위한 처리
     if not drawing and len(points) > 0:
         roi = img.copy()
         # 그린 숫자 영역만 추출 (너무 작은 숫자들을 무시하기 위해 크기 조정 필요)
@@ -54,7 +52,10 @@ while True:
             roi = img[y:y+h, x:x+w]
             processed_roi = preprocess_digit(roi)
             pred = clf.predict([processed_roi])[0]
-            cv2.putText(img, f'Predicted: {int(pred)}', (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 0), 2)
+            cv2.putText(img, f'Number is {int(pred)}', (10, 450), cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 255, 255), 2)
+
+    # 이미지 표시
+    cv2.imshow('Draw Digits', img)
 
     if cv2.waitKey(1) & 0xFF == ord('q'):
         break
