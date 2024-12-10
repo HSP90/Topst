@@ -13,7 +13,7 @@ def preprocess_digit(roi):
     """
     gray = cv2.cvtColor(roi, cv2.COLOR_BGR2GRAY)
     resized = cv2.resize(gray, (28, 28), interpolation=cv2.INTER_AREA)
-    _, binary = cv2.threshold(resized, 120, 255, cv2.THRESH_BINARY_INV)
+    _, binary = cv2.threshold(resized, 128, 255, cv2.THRESH_BINARY_INV)
     flattened = binary.flatten() / 255.0
     return flattened
 
@@ -23,18 +23,16 @@ def detect_and_recognize_digits(image):
     """
     # 그레이스케일 변환 및 대비 조정
     gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
-    gray = cv2.equalizeHist(gray)  # 대비 개선
-    blurred = cv2.GaussianBlur(gray, (5, 5), 0)
-    edged = cv2.Canny(blurred, 50, 150)
+    gray = cv2.GaussianBlur(gray, (5, 5), 0)
+    edged = cv2.Canny(gray, 50, 200)
 
     # 윤곽선 탐지
     contours, _ = cv2.findContours(edged, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
 
     for contour in contours:
-        # 윤곽선으로부터 영역 추출
         x, y, w, h = cv2.boundingRect(contour)
 
-        # 크기 조건으로 필터링
+        # 크기와 형태 조건 필터링
         if 20 < w < 100 and 20 < h < 100 and 0.5 < w / h < 2:
             roi = image[y:y+h, x:x+w]
             processed_roi = preprocess_digit(roi)
@@ -43,17 +41,20 @@ def detect_and_recognize_digits(image):
                 # 숫자 예측
                 pred = clf.predict([processed_roi])[0]
 
-                # 사각형 그리기 및 예측값 출력
+                # "5"와 "7" 편향 필터링 (디버깅용)
+                if pred in [5, 7]:
+                    print(f"편향 감지: 예측된 숫자: {pred} (위치: x={x}, y={y})")
+
+                # 사각형 및 예측값 출력
                 cv2.rectangle(image, (x, y), (x + w, y + h), (0, 255, 0), 2)
                 cv2.putText(image, f'{int(pred)}', (x, y - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.9, (0, 255, 0), 2)
             except Exception as e:
-                # 예외 처리: 잘못된 데이터 스킵
-                print(f"Error processing contour: {e}")
+                print(f"오류 발생: {e}")
 
     return image
 
 print("모델 로드 완료")
-cap = cv2.VideoCapture(1)  # 0은 기본 웹캠, 1은 외부 웹캠
+cap = cv2.VideoCapture(0)
 cap.set(cv2.CAP_PROP_FRAME_WIDTH, 640)
 cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 480)
 print("카메라 연결 완료")
